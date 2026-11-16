@@ -1,6 +1,6 @@
 # Robbie CRM — Test Plan (Phases 1–4)
 
-Status: plan only. No test code or test dependencies exist yet. Today the project has `npm run lint` and `npm run build` plus manual checks.
+Status: **stage 1 (unit tests) done** — Vitest is set up (`npm test`), covering `lib/invoices/calc.ts`, `lib/invoices/format.ts` and `lib/clients/status.ts`. Gap G1 is recorded as an `it.fails` test in `calc.test.ts`. Stages 3–4 (integration, E2E) not started.
 
 Phase 1 is built. Phases 2–4 are planned in `robbie_CRM_change_brief.md`, so their cases describe intended behaviour and will be refined when each phase is built.
 

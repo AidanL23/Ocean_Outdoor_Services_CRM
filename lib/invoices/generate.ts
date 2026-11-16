@@ -5,38 +5,7 @@ import Docxtemplater from "docxtemplater";
 import PizZip from "pizzip";
 import { supabase } from "@/lib/supabase/server";
 import { lineComputations, invoiceTotals } from "./calc";
-
-function formatPlain(value: number) {
-  return value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
-function formatLongDate(dateStr: string | null) {
-  if (!dateStr) return "";
-  return new Date(`${dateStr}T00:00:00`).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatShortDate(dateStr: string | null) {
-  if (!dateStr) return "";
-  return new Date(`${dateStr}T00:00:00`).toLocaleDateString("en-US", {
-    month: "numeric",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function splitAddress(address: string | null) {
-  if (!address) return { line1: "", line2: "" };
-  const idx = address.indexOf(",");
-  if (idx === -1) return { line1: address.trim(), line2: "" };
-  return { line1: address.slice(0, idx).trim(), line2: address.slice(idx + 1).trim() };
-}
+import { formatPlain, formatLongDate, formatShortDate, splitAddress } from "./format";
 
 export async function generateInvoiceDocx(invoiceId: string) {
   const { data: invoice, error } = await supabase
