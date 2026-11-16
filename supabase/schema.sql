@@ -8,9 +8,11 @@ create table public.clients (
   name text not null,
   phone text,
   email text,
-  status text default 'active',
+  status text not null default 'lead'
+    constraint clients_status_check check (status in ('lead', 'active', 'declined', 'past')),
   created_at timestamptz default now()
 );
+-- ^ as of supabase/migrations/001_client_status.sql
 
 create table public.properties (
   id uuid primary key default gen_random_uuid(),

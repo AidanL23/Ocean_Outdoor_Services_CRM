@@ -2,8 +2,10 @@ import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase/server";
 import { updateClient } from "@/app/clients/actions";
 import { Card } from "@/components/ui/card";
-import { Input, Label, Select, FieldGroup } from "@/components/ui/field";
+import { Input, Label, FieldGroup } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
+import { ClientStatusSelect } from "@/components/client-status-select";
+import { DEFAULT_CLIENT_STATUS, isClientStatus } from "@/lib/clients/status";
 
 export default async function EditClientPage({
   params,
@@ -36,13 +38,9 @@ export default async function EditClientPage({
             <Label htmlFor="email">Email</Label>
             <Input id="email" name="email" type="email" defaultValue={client.email ?? ""} />
           </FieldGroup>
-          <FieldGroup>
-            <Label htmlFor="status">Status</Label>
-            <Select id="status" name="status" defaultValue={client.status ?? "active"}>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </Select>
-          </FieldGroup>
+          <ClientStatusSelect
+            defaultValue={isClientStatus(client.status) ? client.status : DEFAULT_CLIENT_STATUS}
+          />
           <Button type="submit">Save Changes</Button>
         </form>
       </Card>

@@ -3,12 +3,13 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { supabase } from "@/lib/supabase/server";
+import { DEFAULT_CLIENT_STATUS, parseClientStatus } from "@/lib/clients/status";
 
 export async function createClient(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim() || null;
   const email = String(formData.get("email") ?? "").trim() || null;
-  const status = String(formData.get("status") ?? "active");
+  const status = parseClientStatus(formData.get("status") ?? DEFAULT_CLIENT_STATUS);
 
   if (!name) throw new Error("Name is required");
 
@@ -28,7 +29,7 @@ export async function updateClient(clientId: string, formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim() || null;
   const email = String(formData.get("email") ?? "").trim() || null;
-  const status = String(formData.get("status") ?? "active");
+  const status = parseClientStatus(formData.get("status"));
 
   if (!name) throw new Error("Name is required");
 

@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "backup": "node --env-file=.env.local scripts/backup-data.mjs",
+    "backup:sql": "node scripts/backup-to-sql.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.0",

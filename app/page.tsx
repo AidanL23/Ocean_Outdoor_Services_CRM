@@ -1,17 +1,21 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/server";
 import { Card, CardTitle } from "@/components/ui/card";
+import type { ClientStatus } from "@/lib/clients/status";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [{ count: activeJobs }, { count: totalClients }, { count: unpaidInvoices }] =
+  const [{ count: activeJobs }, { count: activeClients }, { count: unpaidInvoices }] =
     await Promise.all([
       supabase
         .from("jobs")
         .select("id", { count: "exact", head: true })
         .not("status", "in", "(completed,invoiced)"),
-      supabase.from("clients").select("id", { count: "exact", head: true }),
+      supabase
+        .from("clients")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "active" satisfies ClientStatus),
       supabase
         .from("invoices")
         .select("id", { count: "exact", head: true })
@@ -20,7 +24,7 @@ export default async function DashboardPage() {
 
   const stats = [
     { label: "Active Jobs", value: activeJobs ?? 0, href: "/jobs" },
-    { label: "Clients", value: totalClients ?? 0, href: "/clients" },
+    { label: "Active Clients", value: activeClients ?? 0, href: "/clients?status=active" },
     { label: "Unpaid Invoices", value: unpaidInvoices ?? 0, href: "/invoices" },
   ];
 
