@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase/server";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Input, Textarea, Label, FieldGroup } from "@/components/ui/field";
 import { Button, LinkButton } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { StatusBadge, ClientStatusBadge } from "@/components/ui/status-badge";
 import { addProperty, addActivityNote } from "@/app/clients/actions";
 
 export default async function ClientDetailPage({
@@ -47,7 +47,7 @@ export default async function ClientDetailPage({
         <div>
           <h1 className="text-xl font-semibold text-gray-900">{client.name}</h1>
           <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
-            <StatusBadge status={client.status} />
+            <ClientStatusBadge status={client.status} />
             {client.phone && <span>{client.phone}</span>}
             {client.email && <span>{client.email}</span>}
           </div>

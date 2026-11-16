@@ -1,7 +1,9 @@
 import { createClient } from "@/app/clients/actions";
 import { Card } from "@/components/ui/card";
-import { Input, Label, Select, FieldGroup } from "@/components/ui/field";
+import { Input, Label, FieldGroup } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
+import { ClientStatusSelect } from "@/components/client-status-select";
+import { DEFAULT_CLIENT_STATUS } from "@/lib/clients/status";
 
 export default function NewClientPage() {
   return (
@@ -21,13 +23,7 @@ export default function NewClientPage() {
             <Label htmlFor="email">Email</Label>
             <Input id="email" name="email" type="email" />
           </FieldGroup>
-          <FieldGroup>
-            <Label htmlFor="status">Status</Label>
-            <Select id="status" name="status" defaultValue="active">
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </Select>
-          </FieldGroup>
+          <ClientStatusSelect defaultValue={DEFAULT_CLIENT_STATUS} />
           <Button type="submit">Create Client</Button>
         </form>
       </Card>
