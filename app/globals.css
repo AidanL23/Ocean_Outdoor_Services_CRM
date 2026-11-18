@@ -12,11 +12,11 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* The app is designed light-only (dark text throughout). The starter template's
+   dark-mode switch turned the page black and hid headings, so it's gone, and
+   color-scheme keeps browser controls (date pickers, inputs) light as well. */
+:root {
+  color-scheme: light;
 }
 
 body {

@@ -14,6 +14,10 @@ const TABLES = [
   "invoice_line_items",
   "activity_logs",
 ];
+// Added by later migrations. Skipped (with a note) when backing up a database that
+// hasn't had that migration yet, e.g. Robbie's before the handover.
+const OPTIONAL_TABLES = new Set(["app_settings"]);
+TABLES.push(...OPTIONAL_TABLES);
 const PAGE_SIZE = 1000;
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -33,7 +37,11 @@ async function fetchAll(table) {
       .select("*")
       .order("id")
       .range(from, from + PAGE_SIZE - 1);
-    if (error) throw new Error(`${table}: ${error.message}`);
+    if (error) {
+      const missing = error.code === "PGRST205" || error.code === "42P01";
+      if (missing && OPTIONAL_TABLES.has(table)) return null;
+      throw new Error(`${table}: ${error.message}`);
+    }
     rows.push(...data);
     if (data.length < PAGE_SIZE) return rows;
   }
@@ -46,6 +54,10 @@ await mkdir(outDir, { recursive: true });
 
 for (const table of TABLES) {
   const rows = await fetchAll(table);
+  if (rows === null) {
+    console.log(`${table}: skipped (not in this database yet)`);
+    continue;
+  }
   await writeFile(join(outDir, `${table}.json`), JSON.stringify(rows, null, 2));
   console.log(`${table}: ${rows.length} rows`);
 }

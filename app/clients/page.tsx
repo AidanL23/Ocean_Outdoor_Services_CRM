@@ -3,35 +3,59 @@ import { supabase } from "@/lib/supabase/server";
 import { Table, Thead, Th, Tr, Td } from "@/components/ui/table";
 import { ClientStatusBadge } from "@/components/ui/status-badge";
 import { LinkButton } from "@/components/ui/button";
+import { LastContactCell } from "@/components/last-contact";
 import { CLIENT_STATUSES, isClientStatus } from "@/lib/clients/status";
+import { parseClientSort, sortByLastContact, type ClientSort } from "@/lib/contact/last-contact";
+import { getContactThresholds } from "@/lib/settings";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+
+function clientsHref(status: string | null, sort: ClientSort) {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  if (sort !== "name") params.set("sort", sort);
+  const query = params.toString();
+  return query ? `/clients?${query}` : "/clients";
+}
 
 export default async function ClientsPage({
   searchParams,
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const { status: statusParam } = await searchParams;
+  const { status: statusParam, sort: sortParam } = await searchParams;
   const activeFilter = isClientStatus(statusParam) ? statusParam : null;
+  const sort = parseClientSort(sortParam);
 
-  // One query: the list is small, so counts and filtering are done in memory.
-  const { data: allClients, error } = await supabase
-    .from("clients")
-    .select("id, name, phone, email, status")
-    .order("name");
+  // The list is small, so counts, filtering and sorting are done in memory.
+  const [{ data: allClients, error }, { data: lastContacts, error: lcError }, thresholds] =
+    await Promise.all([
+      supabase.from("clients").select("id, name, phone, email, status").order("name"),
+      supabase.from("client_last_contact").select("client_id, last_contact_at"),
+      getContactThresholds(),
+    ]);
 
   if (error) throw new Error(error.message);
+  if (lcError) throw new Error(lcError.message);
+
+  const lastContactById = new Map(lastContacts.map((r) => [r.client_id, r.last_contact_at]));
+  const now = new Date();
 
   const counts = new Map<string, number>();
   for (const c of allClients) {
     counts.set(c.status, (counts.get(c.status) ?? 0) + 1);
   }
 
-  const clients = activeFilter
-    ? allClients.filter((c) => c.status === activeFilter)
-    : allClients;
+  const clients = sortByLastContact(
+    (activeFilter ? allClients.filter((c) => c.status === activeFilter) : allClients).map(
+      (c) => ({ ...c, lastContactAt: lastContactById.get(c.id) ?? null })
+    ),
+    sort
+  );
+
+  const nextContactSort: ClientSort = sort === "last_contact" ? "-last_contact" : "last_contact";
+  const contactSortArrow = sort === "last_contact" ? " ↓" : sort === "-last_contact" ? " ↑" : "";
 
   const filters = [
     { value: null, label: "All", count: allClients.length },
@@ -57,7 +81,7 @@ export default async function ClientsPage({
           return (
             <Link
               key={f.label}
-              href={f.value ? `/clients?status=${f.value}` : "/clients"}
+              href={clientsHref(f.value, sort)}
               aria-current={selected ? "page" : undefined}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors",
@@ -87,10 +111,31 @@ export default async function ClientsPage({
       ) : (
         <Table>
           <Thead>
-            <Th>Name</Th>
+            <Th aria-sort={sort === "name" ? "ascending" : undefined}>
+              <Link href={clientsHref(activeFilter, "name")} className="hover:text-gray-800">
+                Name
+              </Link>
+            </Th>
             <Th>Phone</Th>
             <Th>Email</Th>
             <Th>Status</Th>
+            <Th
+              aria-sort={
+                sort === "name" ? undefined : sort === "last_contact" ? "ascending" : "descending"
+              }
+            >
+              <Link
+                href={clientsHref(activeFilter, nextContactSort)}
+                className="whitespace-nowrap hover:text-gray-800"
+                title={
+                  nextContactSort === "last_contact"
+                    ? "Sort: longest since contact first"
+                    : "Sort: most recent contact first"
+                }
+              >
+                Last Contact{contactSortArrow}
+              </Link>
+            </Th>
           </Thead>
           <tbody>
             {clients.map((client) => (
@@ -108,6 +153,12 @@ export default async function ClientsPage({
                 <Td>
                   <ClientStatusBadge status={client.status} />
                 </Td>
+                <LastContactCell
+                  lastContactAt={client.lastContactAt}
+                  clientStatus={client.status}
+                  thresholds={thresholds}
+                  now={now}
+                />
               </Tr>
             ))}
           </tbody>

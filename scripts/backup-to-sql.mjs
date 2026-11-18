@@ -1,8 +1,9 @@
 // Turns a backup folder (from `npm run backup`) into one data.sql that you paste
-// into the SQL Editor of another Supabase project, after running supabase/schema.sql there.
+// into the SQL Editor of another Supabase project, after running supabase/schema.sql
+// and every supabase/migrations/NNN_*.sql there, in order.
 // Usage: npm run backup:sql -- <backup-dir>
 // Output: <backup-dir>/data.sql (stays outside the repo with the backup; it contains client data)
-import { readFile, writeFile } from "node:fs/promises";
+import { access, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 // Parents before children, so foreign keys are satisfied.
@@ -21,11 +22,23 @@ if (!dir) {
   process.exit(1);
 }
 
+const jobClient = new Map();
+
 const parts = ["begin;", ""];
 for (const table of TABLES) {
   const rows = JSON.parse(await readFile(join(dir, `${table}.json`), "utf8"));
   console.log(`${table}: ${rows.length} rows`);
+  if (table === "jobs") for (const job of rows) jobClient.set(job.id, job.client_id);
   if (rows.length === 0) continue;
+
+  // Same backfill as supabase/migrations/002_last_contact.sql, so a backup taken
+  // before that migration loads into a database where contact_date is NOT NULL.
+  if (table === "activity_logs") {
+    for (const row of rows) {
+      row.contact_date ??= row.created_at ?? new Date().toISOString();
+      if (!row.client_id && row.job_id) row.client_id = jobClient.get(row.job_id) ?? null;
+    }
+  }
 
   // Same mapping as supabase/migrations/001_client_status.sql, so a backup taken
   // before that migration still loads into a database that has the new constraint.
@@ -57,6 +70,32 @@ for (const table of TABLES) {
     `select * from jsonb_populate_recordset(null::public.${table}, ${tag}${json}${tag}::jsonb);`,
     ""
   );
+}
+
+// app_settings (migration 002) already has its one row, so update it instead of inserting.
+// Backups taken before migration 002 have no file; the defaults are kept.
+const settingsFile = join(dir, "app_settings.json");
+if (await access(settingsFile).then(() => true, () => false)) {
+  const [settings] = JSON.parse(await readFile(settingsFile, "utf8"));
+  console.log(`app_settings: ${settings ? 1 : 0} rows`);
+  if (settings) {
+    const green = Number(settings.last_contact_green_days);
+    const yellow = Number(settings.last_contact_yellow_days);
+    if (!Number.isInteger(green) || !Number.isInteger(yellow)) {
+      throw new Error("app_settings: thresholds are not whole numbers");
+    }
+    parts.push(
+      "insert into public.app_settings (id, last_contact_green_days, last_contact_yellow_days)",
+      `values (true, ${green}, ${yellow})`,
+      "on conflict (id) do update set",
+      "  last_contact_green_days = excluded.last_contact_green_days,",
+      "  last_contact_yellow_days = excluded.last_contact_yellow_days,",
+      "  updated_at = now();",
+      ""
+    );
+  }
+} else {
+  console.log("app_settings: no file (backup predates migration 002), defaults kept");
 }
 
 // Make the next new invoice continue after the highest imported number.

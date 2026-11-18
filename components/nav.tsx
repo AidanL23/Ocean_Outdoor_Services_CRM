@@ -5,6 +5,7 @@ const links = [
   { href: "/clients", label: "Clients" },
   { href: "/jobs", label: "Jobs" },
   { href: "/invoices", label: "Invoices" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export function Nav() {

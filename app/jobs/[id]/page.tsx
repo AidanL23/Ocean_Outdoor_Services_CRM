@@ -2,8 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase/server";
 import { Card, CardTitle } from "@/components/ui/card";
-import { Input, Textarea, Label, FieldGroup } from "@/components/ui/field";
-import { Button, LinkButton } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/button";
+import { ActivityNotes, ActivityNoteForm, ACTIVITY_NOTE_COLUMNS } from "@/components/activity-log";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { addActivityNote } from "@/app/clients/actions";
 
@@ -24,8 +24,9 @@ export default async function JobDetailPage({
 
   const { data: notes } = await supabase
     .from("activity_logs")
-    .select("id, content, author, created_at")
+    .select(ACTIVITY_NOTE_COLUMNS)
     .eq("job_id", id)
+    .order("contact_date", { ascending: false })
     .order("created_at", { ascending: false });
 
   return (
@@ -68,37 +69,8 @@ export default async function JobDetailPage({
 
         <Card>
           <CardTitle>Activity Log</CardTitle>
-          <ul className="mb-4 space-y-3">
-            {notes && notes.length > 0 ? (
-              notes.map((note) => (
-                <li key={note.id} className="text-sm text-gray-700">
-                  <div>{note.content}</div>
-                  <div className="text-xs text-gray-400">
-                    {note.author ? `${note.author} — ` : ""}
-                    {new Date(note.created_at!).toLocaleString()}
-                  </div>
-                </li>
-              ))
-            ) : (
-              <li className="text-sm text-gray-500">No notes yet.</li>
-            )}
-          </ul>
-          <form
-            action={addActivityNote.bind(null, job.client_id!, job.id)}
-            className="space-y-2"
-          >
-            <FieldGroup>
-              <Label htmlFor="content">Add Note</Label>
-              <Textarea id="content" name="content" rows={2} required />
-            </FieldGroup>
-            <FieldGroup>
-              <Label htmlFor="author">Author</Label>
-              <Input id="author" name="author" />
-            </FieldGroup>
-            <Button type="submit" variant="secondary">
-              Add Note
-            </Button>
-          </form>
+          <ActivityNotes notes={notes} />
+          <ActivityNoteForm action={addActivityNote.bind(null, job.client_id!, job.id)} />
         </Card>
       </div>
     </div>
