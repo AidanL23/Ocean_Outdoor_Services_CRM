@@ -1,0 +1,51 @@
+name: CI
+
+# Runs unit tests, lint and a production build on every PR into master and
+# every push to master. See docs/test-plan.md section 9.
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+# A newer push to the same branch cancels the run still in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Test, lint and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # lib/supabase/server.ts throws at import time without these, and
+    # `next build` imports it while collecting page data. The build never
+    # queries the database, so placeholders are enough; no real keys in CI.
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+      NEXT_TELEMETRY_DISABLED: 1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build

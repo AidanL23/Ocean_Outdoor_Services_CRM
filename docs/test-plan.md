@@ -150,9 +150,11 @@ Plus a **smoke test:** every route returns 200 with an empty database (the `/cli
 
 Run lint, build and the unit tests before every commit. Run integration tests before merging a phase. E2E before handing a build to Robbie.
 
+**CI (GitHub Actions):** `.github/workflows/ci.yml` runs the unit tests, lint and build on every PR into `master` and every push to `master`. It uses placeholder Supabase env vars, because the build only needs them to exist and never queries the database. When stage 3 lands, add a CI step for `npm run test:int` with the test project's URL and key stored as GitHub repository secrets (never the dev or client project). E2E stays local for now.
+
 ## 10. Open items
 
 - Rounding rule for money (G1) and tax-rate validation (G2).
 - Which `invoices.status` values are allowed (G4).
 - Name and project ref of the second Supabase project, to put in the safety allow-list.
-- Whether to run tests automatically on push (GitHub Actions) once the repo is hosted.
+- ~~Whether to run tests automatically on push (GitHub Actions) once the repo is hosted.~~ Decided: yes. Unit tests, lint and build run in CI (see section 9).
