@@ -16,6 +16,7 @@ export type Database = {
         Row: {
           author: string | null
           client_id: string | null
+          contact_date: string
           content: string
           created_at: string | null
           id: string
@@ -24,6 +25,7 @@ export type Database = {
         Insert: {
           author?: string | null
           client_id?: string | null
+          contact_date?: string
           content: string
           created_at?: string | null
           id?: string
@@ -32,6 +34,7 @@ export type Database = {
         Update: {
           author?: string | null
           client_id?: string | null
+          contact_date?: string
           content?: string
           created_at?: string | null
           id?: string
@@ -53,6 +56,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      app_settings: {
+        Row: {
+          id: boolean
+          last_contact_green_days: number
+          last_contact_yellow_days: number
+          updated_at: string
+        }
+        Insert: {
+          id?: boolean
+          last_contact_green_days?: number
+          last_contact_yellow_days?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: boolean
+          last_contact_green_days?: number
+          last_contact_yellow_days?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       clients: {
         Row: {
@@ -261,7 +285,21 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      client_last_contact: {
+        Row: {
+          client_id: string
+          last_contact_at: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       [_ in never]: never

@@ -12,6 +12,14 @@ export type ClientStatus = (typeof CLIENT_STATUSES)[number]["value"];
 
 export const DEFAULT_CLIENT_STATUS: ClientStatus = "lead";
 
+// Statuses whose Last Contact is colour-coded green/yellow/red. Declined and Past
+// clients show the date in neutral grey, so red only flags someone worth calling.
+export const CONTACT_TRACKED_STATUSES: readonly ClientStatus[] = ["lead", "active"];
+
+export function tracksLastContact(status: string | null): boolean {
+  return CONTACT_TRACKED_STATUSES.some((s) => s === status);
+}
+
 export function isClientStatus(value: unknown): value is ClientStatus {
   return CLIENT_STATUSES.some((s) => s.value === value);
 }

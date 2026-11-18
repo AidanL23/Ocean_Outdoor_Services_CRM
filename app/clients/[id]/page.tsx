@@ -5,7 +5,12 @@ import { Card, CardTitle } from "@/components/ui/card";
 import { Input, Textarea, Label, FieldGroup } from "@/components/ui/field";
 import { Button, LinkButton } from "@/components/ui/button";
 import { StatusBadge, ClientStatusBadge } from "@/components/ui/status-badge";
+import { ActivityNotes, ActivityNoteForm, ACTIVITY_NOTE_COLUMNS } from "@/components/activity-log";
+import { LastContactBadge } from "@/components/last-contact";
 import { addProperty, addActivityNote } from "@/app/clients/actions";
+import { getContactThresholds } from "@/lib/settings";
+
+export const dynamic = "force-dynamic";
 
 export default async function ClientDetailPage({
   params,
@@ -14,8 +19,15 @@ export default async function ClientDetailPage({
 }) {
   const { id } = await params;
 
-  const [{ data: client }, { data: properties }, { data: jobs }, { data: notes }, { data: invoices }] =
-    await Promise.all([
+  const [
+    { data: client },
+    { data: properties },
+    { data: jobs },
+    { data: notes },
+    { data: invoices },
+    { data: lastContact, error: lastContactError },
+    thresholds,
+  ] = await Promise.all([
       supabase.from("clients").select("*").eq("id", id).single(),
       supabase
         .from("properties")
@@ -29,25 +41,39 @@ export default async function ClientDetailPage({
         .order("created_at", { ascending: false }),
       supabase
         .from("activity_logs")
-        .select("id, content, author, created_at")
+        .select(ACTIVITY_NOTE_COLUMNS)
         .eq("client_id", id)
+        .order("contact_date", { ascending: false })
         .order("created_at", { ascending: false }),
       supabase
         .from("invoices")
         .select("id, invoice_number, status, invoice_date")
         .eq("client_id", id)
         .order("invoice_number", { ascending: false }),
+      supabase
+        .from("client_last_contact")
+        .select("last_contact_at")
+        .eq("client_id", id)
+        .maybeSingle(),
+      getContactThresholds(),
     ]);
 
   if (!client) notFound();
+  if (lastContactError) throw new Error(lastContactError.message);
 
   return (
     <div>
       <div className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">{client.name}</h1>
-          <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-500">
             <ClientStatusBadge status={client.status} />
+            <LastContactBadge
+              lastContactAt={lastContact?.last_contact_at ?? null}
+              clientStatus={client.status}
+              thresholds={thresholds}
+              now={new Date()}
+            />
             {client.phone && <span>{client.phone}</span>}
             {client.email && <span>{client.email}</span>}
           </div>
@@ -141,37 +167,8 @@ export default async function ClientDetailPage({
 
         <Card>
           <CardTitle>Activity Log</CardTitle>
-          <ul className="mb-4 space-y-3">
-            {notes && notes.length > 0 ? (
-              notes.map((note) => (
-                <li key={note.id} className="text-sm text-gray-700">
-                  <div>{note.content}</div>
-                  <div className="text-xs text-gray-400">
-                    {note.author ? `${note.author} — ` : ""}
-                    {new Date(note.created_at!).toLocaleString()}
-                  </div>
-                </li>
-              ))
-            ) : (
-              <li className="text-sm text-gray-500">No notes yet.</li>
-            )}
-          </ul>
-          <form
-            action={addActivityNote.bind(null, client.id, null)}
-            className="space-y-2"
-          >
-            <FieldGroup>
-              <Label htmlFor="content">Add Note</Label>
-              <Textarea id="content" name="content" rows={2} required />
-            </FieldGroup>
-            <FieldGroup>
-              <Label htmlFor="author">Author</Label>
-              <Input id="author" name="author" />
-            </FieldGroup>
-            <Button type="submit" variant="secondary">
-              Add Note
-            </Button>
-          </form>
+          <ActivityNotes notes={notes} />
+          <ActivityNoteForm action={addActivityNote.bind(null, client.id, null)} />
         </Card>
       </div>
     </div>

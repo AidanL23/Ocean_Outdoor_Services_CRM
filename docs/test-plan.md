@@ -1,6 +1,6 @@
 # Robbie CRM — Test Plan (Phases 1–4)
 
-Status: **stage 1 (unit tests) done** — Vitest is set up (`npm test`), covering `lib/invoices/calc.ts`, `lib/invoices/format.ts` and `lib/clients/status.ts`. Gap G1 is recorded as an `it.fails` test in `calc.test.ts`. Stages 3–4 (integration, E2E) not started.
+Status: **stage 1 (unit tests) done** — Vitest is set up (`npm test`), covering `lib/invoices/calc.ts`, `lib/invoices/format.ts`, `lib/clients/status.ts` and (Phase 2) `lib/contact/last-contact.ts`. Gap G1 is recorded as an `it.fails` test in `calc.test.ts`. Stages 3–4 (integration, E2E) not started.
 
 Phase 1 is built. Phases 2–4 are planned in `robbie_CRM_change_brief.md`, so their cases describe intended behaviour and will be refined when each phase is built.
 
@@ -70,11 +70,14 @@ Pure functions, no database. Extract `splitAddress`, `formatPlain` and the date 
 - `formatLongDate` / `formatShortDate`: null gives `""`; `2026-01-31` has no timezone drift.
 - `splitAddress`: null, no comma, one comma, many commas, surrounding spaces.
 
-**Phase 2 (when built):** `lastContactStatus(daysSince, thresholds)`
-- 0, 14, 15, 30, 31 days map to green, green, yellow, yellow, red.
-- `null` (never contacted) maps to grey.
-- Custom thresholds respected; thresholds where yellow ≤ green are rejected.
-- "12 days ago" wording for 0, 1, 2, 30, 400 days; future dates are handled without a negative.
+**Phase 2 (built):** `lib/contact/last-contact.test.ts`
+- `contactLevel`: 0, 14, 15, 30, 31 days map to green, green, yellow, yellow, red; `null` (never contacted) is grey; custom thresholds respected.
+- `validateThresholds` / `parseThresholds`: yellow ≤ green, negatives, fractions, blanks and absurd values rejected.
+- `daysSince` counts calendar days in the business time zone (America/New_York, `lib/time-zone.ts`): 11 pm yesterday is 1 day; DST change; future is 0.
+- "12 days ago" wording for 0, 1, 2, 30, 400 days; never negative.
+- Declined and Past clients keep the text but get neutral grey (`tracksLastContact`).
+- `parseContactDateTime` (date and time on the note form): blank or untouched default means now; Eastern wall-clock time in standard and daylight time; future rejected; invalid values rejected.
+- `sortByLastContact`: never-contacted first when sorting by longest since contact.
 
 **Phase 3:** service-type list is unique; Lawn Care pre-fills season 3–10; season months must be 1–12.
 
