@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase/server";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Input, Select, Label, FieldGroup } from "@/components/ui/field";
-import { Button, LinkButton } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Table, Thead, Th, Tr, Td } from "@/components/ui/table";
 import { addLineItem, deleteLineItem, updateInvoiceStatus } from "@/app/invoices/actions";
