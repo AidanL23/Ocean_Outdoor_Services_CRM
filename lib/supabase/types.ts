@@ -57,6 +57,119 @@ export type Database = {
           },
         ]
       }
+      agreement_schedule_parts: {
+        Row: {
+          agreement_id: string
+          created_at: string
+          end_date: string
+          id: string
+          interval_weeks: number
+          price_per_visit: number
+          sort_order: number
+          start_date: string
+        }
+        Insert: {
+          agreement_id: string
+          created_at?: string
+          end_date: string
+          id?: string
+          interval_weeks: number
+          price_per_visit: number
+          sort_order?: number
+          start_date: string
+        }
+        Update: {
+          agreement_id?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          interval_weeks?: number
+          price_per_visit?: number
+          sort_order?: number
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agreement_schedule_parts_agreement_id_fkey"
+            columns: ["agreement_id"]
+            isOneToOne: false
+            referencedRelation: "service_agreements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agreement_tasks: {
+        Row: {
+          agreement_id: string
+          task_id: string
+        }
+        Insert: {
+          agreement_id: string
+          task_id: string
+        }
+        Update: {
+          agreement_id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agreement_tasks_agreement_id_fkey"
+            columns: ["agreement_id"]
+            isOneToOne: false
+            referencedRelation: "service_agreements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agreement_tasks_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "service_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agreement_visits: {
+        Row: {
+          agreement_id: string
+          created_at: string
+          id: string
+          price: number
+          schedule_part_id: string | null
+          visit_date: string
+        }
+        Insert: {
+          agreement_id: string
+          created_at?: string
+          id?: string
+          price: number
+          schedule_part_id?: string | null
+          visit_date: string
+        }
+        Update: {
+          agreement_id?: string
+          created_at?: string
+          id?: string
+          price?: number
+          schedule_part_id?: string | null
+          visit_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agreement_visits_agreement_id_fkey"
+            columns: ["agreement_id"]
+            isOneToOne: false
+            referencedRelation: "service_agreements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agreement_visits_schedule_part_id_fkey"
+            columns: ["schedule_part_id"]
+            isOneToOne: false
+            referencedRelation: "agreement_schedule_parts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_settings: {
         Row: {
           id: boolean
@@ -283,6 +396,143 @@ export type Database = {
           },
         ]
       }
+      service_agreements: {
+        Row: {
+          billing_months: number | null
+          billing_type: string
+          client_id: string
+          created_at: string
+          end_date: string
+          id: string
+          monthly_price: number | null
+          notes: string | null
+          price_per_visit: number | null
+          property_id: string | null
+          renewed_from_id: string | null
+          service_areas: string | null
+          service_type_id: string
+          start_date: string
+          status: string
+        }
+        Insert: {
+          billing_months?: number | null
+          billing_type: string
+          client_id: string
+          created_at?: string
+          end_date: string
+          id?: string
+          monthly_price?: number | null
+          notes?: string | null
+          price_per_visit?: number | null
+          property_id?: string | null
+          renewed_from_id?: string | null
+          service_areas?: string | null
+          service_type_id: string
+          start_date: string
+          status?: string
+        }
+        Update: {
+          billing_months?: number | null
+          billing_type?: string
+          client_id?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          monthly_price?: number | null
+          notes?: string | null
+          price_per_visit?: number | null
+          property_id?: string | null
+          renewed_from_id?: string | null
+          service_areas?: string | null
+          service_type_id?: string
+          start_date?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_agreements_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_agreements_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_agreements_renewed_from_id_fkey"
+            columns: ["renewed_from_id"]
+            isOneToOne: false
+            referencedRelation: "service_agreements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_agreements_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "service_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_tasks: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      service_types: {
+        Row: {
+          active: boolean
+          created_at: string
+          default_end_month: number | null
+          default_start_month: number | null
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          default_end_month?: number | null
+          default_start_month?: number | null
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          default_end_month?: number | null
+          default_start_month?: number | null
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       client_last_contact: {
@@ -302,7 +552,16 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      save_service_agreement: {
+        Args: {
+          p_agreement: Json
+          p_id: string | null
+          p_parts: Json
+          p_task_ids: string[]
+          p_visits: Json
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
