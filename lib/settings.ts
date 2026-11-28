@@ -18,3 +18,25 @@ export async function getContactThresholds(): Promise<ContactThresholds> {
     yellowDays: data.last_contact_yellow_days,
   };
 }
+
+/** Service types for agreements, in list order (inactive ones included, for old agreements' labels). */
+export async function getServiceTypes() {
+  const { data, error } = await supabase
+    .from("service_types")
+    .select("id, name, default_start_month, default_end_month, sort_order, active")
+    .order("sort_order")
+    .order("name");
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Tasks an agreement can include, in list order (inactive ones included). */
+export async function getServiceTasks() {
+  const { data, error } = await supabase
+    .from("service_tasks")
+    .select("id, name, sort_order, active")
+    .order("sort_order")
+    .order("name");
+  if (error) throw new Error(error.message);
+  return data;
+}

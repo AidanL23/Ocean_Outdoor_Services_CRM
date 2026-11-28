@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { CLIENT_STATUSES } from "@/lib/clients/status";
+import { AGREEMENT_STATUSES } from "@/lib/agreements/constants";
 
 const badgeClasses = "inline-block rounded-full px-2.5 py-0.5 text-xs font-medium";
 const fallbackColor = "bg-gray-100 text-gray-600";
@@ -27,6 +28,15 @@ export function StatusBadge({ status }: { status: string | null }) {
 
 export function ClientStatusBadge({ status }: { status: string | null }) {
   const match = CLIENT_STATUSES.find((s) => s.value === status);
+  return (
+    <span className={cn(badgeClasses, match?.badge ?? fallbackColor)}>
+      {match?.label ?? status ?? "Unknown"}
+    </span>
+  );
+}
+
+export function AgreementStatusBadge({ status }: { status: string | null }) {
+  const match = AGREEMENT_STATUSES.find((s) => s.value === status);
   return (
     <span className={cn(badgeClasses, match?.badge ?? fallbackColor)}>
       {match?.label ?? status ?? "Unknown"}

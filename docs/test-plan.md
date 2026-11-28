@@ -1,8 +1,8 @@
 # Robbie CRM — Test Plan (Phases 1–4)
 
-Status: **stage 1 (unit tests) done** — Vitest is set up (`npm test`), covering `lib/invoices/calc.ts`, `lib/invoices/format.ts`, `lib/clients/status.ts` and (Phase 2) `lib/contact/last-contact.ts`. Gap G1 is recorded as an `it.fails` test in `calc.test.ts`. Stages 3–4 (integration, E2E) not started.
+Status: **stage 1 (unit tests) done** — Vitest is set up (`npm test`), covering `lib/invoices/calc.ts`, `lib/invoices/format.ts`, `lib/clients/status.ts`, (Phase 2) `lib/contact/last-contact.ts` and (Phase 3a) `lib/agreements/*`. Gap G1 is recorded as an `it.fails` test in `calc.test.ts`. Stages 3–4 (integration, E2E) not started.
 
-Phase 1 is built. Phases 2–4 are planned in `robbie_CRM_change_brief.md`, so their cases describe intended behaviour and will be refined when each phase is built.
+Phases 1, 2 and 3a are built. Phases 3b and 4 are planned in `robbie_CRM_change_brief.md`, so their cases describe intended behaviour and will be refined when each phase is built.
 
 ## 1. Goals and what is out of scope
 
@@ -29,7 +29,7 @@ Rule of thumb: if a rule can be tested at a lower layer, test it there. E2E test
 - **A second Supabase project, used only for tests.** Never run integration or E2E tests against the personal dev project once it holds real data, and never against Robbie's project.
 - Env vars live in `.env.test.local` (git-ignored, like `.env.local`): `TEST_SUPABASE_URL`, `TEST_SUPABASE_SERVICE_ROLE_KEY`. Test code never reads `NEXT_PUBLIC_SUPABASE_URL` from `.env.local`.
 - **Safety guard:** a shared setup file refuses to run if `TEST_SUPABASE_URL` is missing, equals the URL in `.env.local`, or its project ref is not on an allow-list in the test config. A wrong key must fail loudly rather than wipe data.
-- **Schema:** build the test project from `supabase/schema.sql` once, and apply each new `supabase/migrations/NNN_*.sql` after it. A migration test (section 6) checks the live schema matches what the code expects.
+- **Schema:** build the test project from `supabase/schema.sql` once (it notes which migration it is current as of), and apply each newer `supabase/migrations/NNN_*.sql` after it. Migrations are safe to re-run. `schema.sql` leaves out functions, so also run `003_service_agreements.sql` for `save_service_agreement()`. A migration test (section 6) checks the live schema matches what the code expects.
 - **Isolation:** each integration test creates its own rows with a unique prefix (`TEST-<random>`) and deletes them in `afterEach`, children before parents, because foreign keys do not cascade (except `invoice_line_items`). A global `afterAll` sweeps any leftover `TEST-` rows.
 - Server actions call `redirect()` and `revalidatePath()`. Integration tests mock `next/cache` and treat the thrown redirect as a success signal.
 - Scripts to add when built: `npm test` (unit), `npm run test:int`, `npm run test:e2e`.
@@ -79,7 +79,18 @@ Pure functions, no database. Extract `splitAddress`, `formatPlain` and the date 
 - `parseContactDateTime` (date and time on the note form): blank or untouched default means now; Eastern wall-clock time in standard and daylight time; future rejected; invalid values rejected.
 - `sortByLastContact`: never-contacted first when sorting by longest since contact.
 
-**Phase 3:** service-type list is unique; Lawn Care pre-fills season 3–10; season months must be 1–12.
+**Phase 3a (built):** `lib/agreements/*.test.ts`
+- `schedule.ts`: a part's dates start on its start date and repeat every 1–4 weeks on that weekday up to and including the end date; bad intervals or dates give none; no drift across DST, month or year ends.
+- 702 Orange St (every other Tuesday, Mar 3 – Oct 31 2026, $65): 18 visits, $1,170, 8 billing months, $146/month, $2 under the visits.
+- A three-part agreement from October into January: visits, prices per part, 4 billing months across the year end, month labels with the year.
+- Monthly price rounds to whole dollars; cents are summed exactly; manual date changes (remove, add, no duplicates) and recovering them from saved dates.
+- Default season: next occurrence (this year while the start month is ahead; today during the start month, never a past date), Oct–Jan ends the next year, end of February in leap years.
+- `addYears` keeps the calendar date (Feb 29 becomes Feb 28).
+- `input.ts`: preview and validation of the form, including an on-call agreement with no schedule, per-visit with a schedule, parts entered out of order, and every rejection (term over two years, parts outside the term or overlapping, bad interval or price, added date outside the term, no visits, billing months outside 1–36). Saved rows convert back to the same form data. `withTerm` moves a single matching part with the agreement dates (not once dates were changed by hand); `newPart` defaults. Editing an active flat-monthly agreement keeps the agreed price (`agreedPrice`, `keepAgreedPrice`) unless recalculating.
+- `format.ts`: "$146/month", "$65/visit", "$60–$80/visit", "$65/visit, on call", and the clients-list summary. `currentPerType`: one agreement per service type (running today, else next to start, else last ended).
+- `renewalInput`: Renew moves the agreement and part dates one calendar year and drops dates changed by hand; four renewals in a row stay Mar 3 – Oct 31 at $146/month (the earlier 52-week shift slid to Feb 29 2028 and $130).
+- `service-lists.ts`: names required and under 60 characters, both season months or neither, order 0–9999, duplicate names explained, and a rejected row keeps what was typed (`submittedListValues`).
+- `constants.ts`: drafts can be saved or activated; active and ended agreements keep their status on save.
 
 ## 6. Integration tests (stage 3, with Phase 4)
 
@@ -87,7 +98,7 @@ Run server actions and queries against the test project.
 
 **Migrations and schema**
 - `001_client_status`: on a seeded table with `active`, `inactive`, `Active `, NULL: the run with NULL fails with the listed message and changes nothing; without NULL it maps `inactive` to `past`, sets the default `lead`, NOT NULL, and the CHECK. Inserting `status = 'prospect'` is rejected.
-- Schema smoke test: all six tables, the 8 foreign keys, identity on `invoices.invoice_number`, RLS enabled on every table.
+- Schema smoke test: every table and foreign key in `schema.sql`, identity on `invoices.invoice_number`, RLS enabled on every table.
 
 **Phase 1**
 - `createClient` with no status stores `lead`; with each valid status stores it; with `bogus` throws and inserts nothing.
@@ -101,9 +112,15 @@ Run server actions and queries against the test project.
 - Settings: saving thresholds persists; the single-row table cannot get a second row.
 - The index on `activity_logs(client_id, contact_date)` exists.
 
-**Phase 3**
-- Create a client with a lawn agreement; add a second; list returns both.
-- A `property_id` from another client is rejected, or at least not displayed under the wrong client.
+**Phase 3a**
+- Migration 003 seeds the four service types and four tasks once; re-running it adds nothing, even after an entry is renamed.
+- `save_service_agreement` creates an agreement with its parts, tasks and visits; saving again replaces them; a failing visit (e.g. negative price) rolls back the whole save.
+- The flat-monthly check rejects a flat agreement without billing months or price, and a per-visit agreement with them.
+- `saveAgreement` rejects a `property_id` from another client, and never moves an existing agreement to another client.
+- Drafts don't appear in the clients list Agreement column; active ones do; ended ones don't.
+- Renew creates a draft with `renewed_from_id` set and every date one calendar year later; renewing the same agreement again opens that renewal instead of creating a second. End only changes an active agreement.
+- Saving an active flat-monthly agreement with a visit removed keeps `monthly_price` and `billing_months`; with `recalculatePrice` it stores the new price.
+- Settings: adding a duplicate service type or task name (any case) is rejected; deactivating keeps the label on existing agreements.
 
 **Phase 4 (highest priority, data-loss rules)**
 - Client with invoices: delete is blocked with the "set to Past Client" message; nothing removed.

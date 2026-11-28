@@ -4,11 +4,13 @@ import { supabase } from "@/lib/supabase/server";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Input, Textarea, Label, FieldGroup } from "@/components/ui/field";
 import { Button, LinkButton } from "@/components/ui/button";
-import { StatusBadge, ClientStatusBadge } from "@/components/ui/status-badge";
+import { StatusBadge, ClientStatusBadge, AgreementStatusBadge } from "@/components/ui/status-badge";
 import { ActivityNotes, ActivityNoteForm, ACTIVITY_NOTE_COLUMNS } from "@/components/activity-log";
 import { LastContactBadge } from "@/components/last-contact";
 import { addProperty, addActivityNote } from "@/app/clients/actions";
 import { getContactThresholds } from "@/lib/settings";
+import { agreementPriceLabel } from "@/lib/agreements/format";
+import { formatDate } from "@/lib/agreements/schedule";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +28,7 @@ export default async function ClientDetailPage({
     { data: notes },
     { data: invoices },
     { data: lastContact, error: lastContactError },
+    { data: agreements, error: agreementsError },
     thresholds,
   ] = await Promise.all([
       supabase.from("clients").select("*").eq("id", id).single(),
@@ -55,11 +58,19 @@ export default async function ClientDetailPage({
         .select("last_contact_at")
         .eq("client_id", id)
         .maybeSingle(),
+      supabase
+        .from("service_agreements")
+        .select(
+          "id, status, billing_type, start_date, end_date, monthly_price, price_per_visit, service_types(name), agreement_schedule_parts(price_per_visit)"
+        )
+        .eq("client_id", id)
+        .order("start_date", { ascending: false }),
       getContactThresholds(),
     ]);
 
   if (!client) notFound();
   if (lastContactError) throw new Error(lastContactError.message);
+  if (agreementsError) throw new Error(agreementsError.message);
 
   return (
     <div>
@@ -118,6 +129,41 @@ export default async function ClientDetailPage({
               Add Property
             </Button>
           </form>
+        </Card>
+
+        <Card>
+          <CardTitle>Service Agreements</CardTitle>
+          <ul className="mb-4 space-y-2">
+            {agreements.length > 0 ? (
+              agreements.map((a) => (
+                <li key={a.id} className="flex items-start justify-between gap-2 text-sm">
+                  <div>
+                    <Link
+                      href={`/agreements/${a.id}`}
+                      className="font-medium text-emerald-700 hover:underline"
+                    >
+                      {a.service_types?.name ?? "Agreement"}
+                    </Link>{" "}
+                    <span className="text-gray-900">
+                      {agreementPriceLabel({
+                        ...a,
+                        partPrices: a.agreement_schedule_parts.map((p) => Number(p.price_per_visit)),
+                      })}
+                    </span>
+                    <div className="text-gray-500">
+                      {formatDate(a.start_date)} – {formatDate(a.end_date)}
+                    </div>
+                  </div>
+                  <AgreementStatusBadge status={a.status} />
+                </li>
+              ))
+            ) : (
+              <li className="text-sm text-gray-500">No agreements yet.</li>
+            )}
+          </ul>
+          <LinkButton href={`/agreements/new?client_id=${client.id}`} variant="secondary">
+            New Agreement
+          </LinkButton>
         </Card>
 
         <Card>
